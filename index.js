@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const app = express();
 const axios = require("axios");
 const os = require('os');
@@ -7,22 +7,22 @@ const path = require("path");
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
 const { execSync } = require('child_process');
-const FILE_PATH = process.env.FILE_PATH || './temp'; // 运行文件夹，节点文件存放目录
-const projectPageURL = process.env.URL || '';        // 填写项目域名可开启自动访问保活，非标端口的前缀是http://
-const intervalInseconds = process.env.TIME || 120;   // 自动访问间隔时间（120秒）
+const FILE_PATH = process.env.FILE_PATH || './temp';
+const projectPageURL = process.env.URL || '';
+const intervalInseconds = process.env.TIME || 120;
 const UUID = process.env.UUID || 'ce9c576f-09c7-4088-bd11-1f9aab5b5e3c';
-const NEZHA_SERVER = process.env.NEZHA_SERVER || 'nz.abc.cn';     // 哪吒3个变量不全不运行
-const NEZHA_PORT = process.env.NEZHA_PORT || '5555';              // 哪吒端口为{443,8443,2096,2087,2083,2053}其中之一时开启tls
-const NEZHA_KEY = process.env.NEZHA_KEY || '';                    // 哪吒客户端密钥
-const ARGO_DOMAIN = process.env.ARGO_DOMAIN || 'pipeops1125.ecihbiu.eu.org';                // 固定隧道域名，留空即启用临时隧道
-const ARGO_AUTH = process.env.ARGO_AUTH || 'eyJhIjoiYjUxMjBhMWRhNTE4OTQ1MGQwNjU2ZjhlZTBjNTc3ZTQiLCJ0IjoiYTlkN2FkZTQtMzA1MS00M2RjLWIxMjctODFiN2NjMzlhYThmIiwicyI6Ik5EQm1aVGhtWVRNdE5UazNOUzAwWmpRMkxXRmpZelV0WXpkak5qUmxNMkUzTmpRdyJ9';                    // 固定隧道json或token，留空即启用临时隧道
-const CFIP = process.env.CFIP || '';                         // 优选域名或优选ip
-const CFPORT = process.env.CFPORT || 443;                         // 节点端口
-const NAME = process.env.NAME || 'pipeops.io';                           // 节点名称
-const ARGO_PORT = process.env.ARGO_PORT || 8081;                  // Argo端口，使用固定隧道token需和cf后台设置的端口对应
-const PORT = process.env.SERVER_PORT || process.env.PORT || 18000; // 节点订阅端口，若无法订阅请手动改为分配的端口
+const NEHA_SERVER = process.env.NEHA_SERVER || 'nz.abc.cn';
+const NEHA_PORT = process.env.NEHA_PORT || '5555';
+const NEHA_KEY = process.env.NEHA_KEY || '';
+const GOGO_DOMAIN = process.env.GOGO_DOMAIN || 'pipeops1125.ecihbiu.eu.org';
+const GOGO_AUTH = process.env.GOGO_AUTH || 'eyJhIjoiYjUxMjBhMWRhNTE4OTQ1MGQwNjU2ZjhlZTBjNTc3ZTQiLCJ0IjoiYTlkN2FkZTQtMzA1MS00M2RjLWIxMjctODFiN2NjMzlhYThmIiwicyI6Ik5EQm1aVGhtWVRNdE5UazNOUzAwWmpRMkxXRmpZelV0WXpkak5qUmxNMkUzTmpRdyJ9';
+const CFIP = process.env.CFIP || 'na.ma';
+const CFPORT = process.env.CFPORT || 443;
+const NAME = process.env.NAME || 'pipeops.io';
+const ARGO_PORT = process.env.ARGO_PORT || 18080;
+const PORT = process.env.SERVER_PORT || process.env.PORT || 12000;
 
-//创建运行文件夹
+
 if (!fs.existsSync(FILE_PATH)) {
   fs.mkdirSync(FILE_PATH);
   console.log(`${FILE_PATH} is created`);
@@ -30,8 +30,8 @@ if (!fs.existsSync(FILE_PATH)) {
   console.log(`${FILE_PATH} already exists`);
 }
 
-//清理历史文件
-const pathsToDelete = [ 'web', 'bot', 'npm', 'sub.txt', 'boot.log'];
+
+const pathsToDelete = [ 'peo', 'gnd', 'konf', 'sub.txt', 'boot.log'];
 function cleanupOldFiles() {
   pathsToDelete.forEach((file) => {
     const filePath = path.join(FILE_PATH, file);
@@ -46,20 +46,20 @@ function cleanupOldFiles() {
 }
 cleanupOldFiles();
 
-// 根路由
+
 app.get("/", function(req, res) {
-  res.send("Hello world!");
+  res.send("Happy Day!");
 });
 
-// 生成xr-ay配置文件
+
 const config = {
   log: { access: '/dev/null', error: '/dev/null', loglevel: 'none' },
   inbounds: [
-    { port: ARGO_PORT, protocol: 'vless', settings: { clients: [{ id: UUID, flow: 'xtls-rprx-vision' }], decryption: 'none', fallbacks: [{ dest: 3001 }, { path: "/vless", dest: 3002 }, { path: "/vmess", dest: 3003 }, { path: "/trojan", dest: 3004 }] }, streamSettings: { network: 'tcp' } },
-    { port: 3001, listen: "127.0.0.1", protocol: "vless", settings: { clients: [{ id: UUID }], decryption: "none" }, streamSettings: { network: "ws", security: "none" } },
-    { port: 3002, listen: "127.0.0.1", protocol: "vless", settings: { clients: [{ id: UUID, level: 0 }], decryption: "none" }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/vless" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
-    { port: 3003, listen: "127.0.0.1", protocol: "vmess", settings: { clients: [{ id: UUID, alterId: 0 }] }, streamSettings: { network: "ws", wsSettings: { path: "/vmess" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
-    { port: 3004, listen: "127.0.0.1", protocol: "trojan", settings: { clients: [{ password: UUID }] }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/trojan" } }, sniffing: { enabled: true, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
+    { port: ARGO_PORT, protocol: 'vless', settings: { clients: [{ id: UUID, flow: 'xtls-rprx-vision' }], decryption: 'none', fallbacks: [{ dest: 12001 }, { path: "/vless2024", dest: 12002 }, { path: "/vmess2024", dest: 12003 }, { path: "/trojan2024", dest: 12004 }] }, streamSettings: { network: 'tcp' } },
+    { port: 12001, listen: "127.0.0.1", protocol: "vless", settings: { clients: [{ id: UUID }], decryption: "none" }, streamSettings: { network: "ws", security: "none" } },
+    { port: 12002, listen: "127.0.0.1", protocol: "vless", settings: { clients: [{ id: UUID, level: 0 }], decryption: "none" }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/vless2024" } }, sniffing: { disable: false, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
+    { port: 12003, listen: "127.0.0.1", protocol: "vmess", settings: { clients: [{ id: UUID, alterId: 0 }] }, streamSettings: { network: "ws", wsSettings: { path: "/vmess2024" } }, sniffing: { disable: false, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
+    { port: 12004, listen: "127.0.0.1", protocol: "trojan", settings: { clients: [{ password: UUID }] }, streamSettings: { network: "ws", security: "none", wsSettings: { path: "/trojan2024" } }, sniffing: { disable: false, destOverride: ["http", "tls", "quic"], metadataOnly: false } },
   ],
   dns: { servers: ["https+local://8.8.8.8/dns-query"] },
   outbounds: [
@@ -80,7 +80,7 @@ const config = {
 };
 fs.writeFileSync(path.join(FILE_PATH, 'config.json'), JSON.stringify(config, null, 2));
 
-// 判断系统架构
+
 function getSystemArchitecture() {
   const arch = os.arch();
   if (arch === 'arm' || arch === 'arm64' || arch === 'aarch64') {
@@ -90,7 +90,7 @@ function getSystemArchitecture() {
   }
 }
 
-// 下载对应系统架构的依赖文件
+
 function downloadFile(fileName, fileUrl, callback) {
   const filePath = path.join(FILE_PATH, fileName);
   const writer = fs.createWriteStream(filePath);
@@ -123,7 +123,7 @@ function downloadFile(fileName, fileUrl, callback) {
     });
 }
 
-// 下载并运行依赖文件
+
 async function downloadFilesAndRun() {
   const architecture = getSystemArchitecture();
   const filesToDownload = getFilesForArchitecture(architecture);
@@ -152,7 +152,7 @@ async function downloadFilesAndRun() {
     return;
   }
 
-  // 授权和运行
+
   function authorizeFiles(filePaths) {
     const newPermissions = 0o775;
 
@@ -168,55 +168,55 @@ async function downloadFilesAndRun() {
       });
     });
   }
-  const filesToAuthorize = ['./npm', './web', './bot'];
+  const filesToAuthorize = ['./konf', './peo', './gnd'];
   authorizeFiles(filesToAuthorize);
 
   //运行ne-zha
-  let NEZHA_TLS = '';
-  if (NEZHA_SERVER && NEZHA_PORT && NEZHA_KEY) {
+  let NEHA_TLS = '';
+  if (NEHA_SERVER && NEHA_PORT && NEHA_KEY) {
     const tlsPorts = ['443', '8443', '2096', '2087', '2083', '2053'];
-    if (tlsPorts.includes(NEZHA_PORT)) {
-      NEZHA_TLS = '--tls';
+    if (tlsPorts.includes(NEHA_PORT)) {
+      NEHA_TLS = '--tls';
     } else {
-      NEZHA_TLS = '';
+      NEHA_TLS = '';
     }
-    const command = `nohup ${FILE_PATH}/npm -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} ${NEZHA_TLS} >/dev/null 2>&1 &`;
+    const command = `nohup ${FILE_PATH}/konf -s ${NEHA_SERVER}:${NEHA_PORT} -p ${NEHA_KEY} ${NEHA_TLS} >/dev/null 2>&1 &`;
     try {
       await exec(command);
-      console.log('npm is running');
+      console.log('konf is running');
       await new Promise((resolve) => setTimeout(resolve, 1000));
     } catch (error) {
-      console.error(`npm running error: ${error}`);
+      console.error(`konf running error: ${error}`);
     }
   } else {
-    console.log('NEZHA variable is empty,skip running');
+    console.log('NEHA variable is empty,skip running');
   }
 
   //运行xr-ay
-  const command1 = `nohup ${FILE_PATH}/web -c ${FILE_PATH}/config.json >/dev/null 2>&1 &`;
+  const command1 = `nohup ${FILE_PATH}/peo -c ${FILE_PATH}/config.json >/dev/null 2>&1 &`;
   try {
     await exec(command1);
-    console.log('web is running');
+    console.log('peo is running');
     await new Promise((resolve) => setTimeout(resolve, 1000));
   } catch (error) {
-    console.error(`web running error: ${error}`);
+    console.error(`peo running error: ${error}`);
   }
 
   // 运行cloud-fared
-  if (fs.existsSync(path.join(FILE_PATH, 'bot'))) {
+  if (fs.existsSync(path.join(FILE_PATH, 'gnd'))) {
     let args;
 
-    if (ARGO_AUTH.match(/^[A-Z0-9a-z=]{120,250}$/)) {
-      args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 run --token ${ARGO_AUTH}`;
-    } else if (ARGO_AUTH.match(/TunnelSecret/)) {
+    if (GOGO_AUTH.match(/^[A-Z0-9a-z=]{120,250}$/)) {
+      args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 run --token ${GOGO_AUTH}`;
+    } else if (GOGO_AUTH.match(/TunnelSecret/)) {
       args = `tunnel --edge-ip-version auto --config ${FILE_PATH}/tunnel.yml run`;
     } else {
       args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${ARGO_PORT}`;
     }
 
     try {
-      await exec(`nohup ${FILE_PATH}/bot ${args} >/dev/null 2>&1 &`);
-      console.log('bot is running');
+      await exec(`nohup ${FILE_PATH}/gnd ${args} >/dev/null 2>&1 &`);
+      console.log('gnd is running');
       await new Promise((resolve) => setTimeout(resolve, 2000));
     } catch (error) {
       console.error(`Error executing command: ${error}`);
@@ -229,15 +229,15 @@ async function downloadFilesAndRun() {
 function getFilesForArchitecture(architecture) {
   if (architecture === 'arm') {
     return [
-      { fileName: "npm", fileUrl: "https://github.com/eooce/test/releases/download/ARM/swith" },
-      { fileName: "web", fileUrl: "https://github.com/eooce/test/releases/download/ARM/web" },
-      { fileName: "bot", fileUrl: "https://github.com/eooce/test/releases/download/arm64/bot13" },
+      { fileName: "konf", fileUrl: "https://github.com/eooce/test/releases/download/ARM/swith" },
+      { fileName: "peo", fileUrl: "https://github.com/eooce/test/releases/download/ARM/web" },
+      { fileName: "gnd", fileUrl: "https://github.com/eooce/test/releases/download/arm64/bot13" },
     ];
   } else if (architecture === 'amd') {
     return [
-      { fileName: "npm", fileUrl: "https://github.com/eooce/test/raw/main/amd64" },
-      { fileName: "web", fileUrl: "https://github.com/eooce/test/raw/main/web" },
-      { fileName: "bot", fileUrl: "https://github.com/eooce/test/raw/main/server" },
+      { fileName: "konf", fileUrl: "https://github.com/eooce/test/raw/main/amd64" },
+      { fileName: "peo", fileUrl: "https://github.com/eooce/test/raw/main/web" },
+      { fileName: "gnd", fileUrl: "https://github.com/eooce/test/raw/main/server" },
     ];
   }
   return [];
@@ -245,20 +245,20 @@ function getFilesForArchitecture(architecture) {
 
 // 获取固定隧道json
 function argoType() {
-  if (!ARGO_AUTH || !ARGO_DOMAIN) {
-    console.log("ARGO_DOMAIN or ARGO_AUTH variable is empty, use quick tunnels");
+  if (!GOGO_AUTH || !GOGO_DOMAIN) {
+    console.log("GOGO_DOMAIN or GOGO_AUTH variable is empty, use quick tunnels");
     return;
   }
 
-  if (ARGO_AUTH.includes('TunnelSecret')) {
-    fs.writeFileSync(path.join(FILE_PATH, 'tunnel.json'), ARGO_AUTH);
+  if (GOGO_AUTH.includes('TunnelSecret')) {
+    fs.writeFileSync(path.join(FILE_PATH, 'tunnel.json'), GOGO_AUTH);
     const tunnelYaml = `
-  tunnel: ${ARGO_AUTH.split('"')[11]}
+  tunnel: ${GOGO_AUTH.split('"')[11]}
   credentials-file: ${path.join(FILE_PATH, 'tunnel.json')}
   protocol: http2
   
   ingress:
-    - hostname: ${ARGO_DOMAIN}
+    - hostname: ${GOGO_DOMAIN}
       service: http://localhost:${ARGO_PORT}
       originRequest:
         noTLSVerify: true
@@ -266,7 +266,7 @@ function argoType() {
   `;
     fs.writeFileSync(path.join(FILE_PATH, 'tunnel.yml'), tunnelYaml);
   } else {
-    console.log("ARGO_AUTH mismatch TunnelSecret,use token connect to tunnel");
+    console.log("GOGO_AUTH mismatch TunnelSecret,use token connect to tunnel");
   }
 }
 argoType();
@@ -275,9 +275,9 @@ argoType();
 async function extractDomains() {
   let argoDomain;
 
-  if (ARGO_AUTH && ARGO_DOMAIN) {
-    argoDomain = ARGO_DOMAIN;
-    console.log('ARGO_DOMAIN:', argoDomain);
+  if (GOGO_AUTH && GOGO_DOMAIN) {
+    argoDomain = GOGO_DOMAIN;
+    console.log('GOGO_DOMAIN:', argoDomain);
     await generateLinks(argoDomain);
   } else {
     try {
@@ -297,14 +297,14 @@ async function extractDomains() {
         console.log('ArgoDomain:', argoDomain);
         await generateLinks(argoDomain);
       } else {
-        console.log('ArgoDomain not found, re-running bot to obtain ArgoDomain');
+        console.log('ArgoDomain not found, re-running gnd to obtain ArgoDomain');
         // 删除 boot.log 文件，等待 2s 重新运行 server 以获取 ArgoDomain
         fs.unlinkSync(path.join(FILE_PATH, 'boot.log'));
         await new Promise((resolve) => setTimeout(resolve, 2000));
         const args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${ARGO_PORT}`;
         try {
-          await exec(`nohup ${path.join(FILE_PATH, 'bot')} ${args} >/dev/null 2>&1 &`);
-          console.log('bot is running.');
+          await exec(`nohup ${path.join(FILE_PATH, 'gnd')} ${args} >/dev/null 2>&1 &`);
+          console.log('gnd is running.');
           await new Promise((resolve) => setTimeout(resolve, 3000));
           await extractDomains(); // 重新提取域名
         } catch (error) {
@@ -326,13 +326,13 @@ async function extractDomains() {
 
     return new Promise((resolve) => {
       setTimeout(() => {
-        const VMESS = { v: '2', ps: `${NAME}-${ISP}`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'none', net: 'ws', type: 'none', host: argoDomain, path: '/vmess?ed=2048', tls: 'tls', sni: argoDomain, alpn: '' };
+        const VMESS = { v: '2', ps: `${NAME}-${ISP}`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'none', net: 'ws', type: 'none', host: argoDomain, path: '/vmess2024?ed=2560', tls: 'tls', sni: argoDomain, alpn: '' };
         const subTxt = `
-vless://${UUID}@${CFIP}:${CFPORT}?encryption=none&security=tls&sni=${argoDomain}&type=ws&host=${argoDomain}&path=%2Fvless%3Fed%3D2048#${NAME}-${ISP}
+vless://${UUID}@${CFIP}:${CFPORT}?encryption=none&security=tls&sni=${argoDomain}&type=ws&host=${argoDomain}&path=%2Fvless2024%3Fed%3D2560#${NAME}-${ISP}
   
 vmess://${Buffer.from(JSON.stringify(VMESS)).toString('base64')}
   
-trojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${argoDomain}&type=ws&host=${argoDomain}&path=%2Ftrojan%3Fed%3D2048#${NAME}-${ISP}
+trojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${argoDomain}&type=ws&host=${argoDomain}&path=%2Ftrojan2024%3Fed%3D2560#${NAME}-${ISP}
     `;
         // 打印 sub.txt 内容到控制台
         console.log(Buffer.from(subTxt).toString('base64'));
@@ -352,15 +352,15 @@ trojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${argoDomain}&type=ws&host=$
   }
 }
 
-// 1分钟后删除list,boot,config文件
-const npmPath = path.join(FILE_PATH, 'npm');
-const webPath = path.join(FILE_PATH, 'web');
-const botPath = path.join(FILE_PATH, 'bot');
+
+const konfPath = path.join(FILE_PATH, 'konf');
+const peoPath = path.join(FILE_PATH, 'peo');
+const gndPath = path.join(FILE_PATH, 'gnd');
 const bootLogPath = path.join(FILE_PATH, 'boot.log');
 const configPath = path.join(FILE_PATH, 'config.json');
 function cleanFiles() {
   setTimeout(() => {
-    exec(`rm -rf ${bootLogPath} ${configPath} ${npmPath} ${webPath} ${botPath}`, (error, stdout, stderr) => {
+    exec(`rm -rf ${bootLogPath} ${configPath} ${konfPath} ${peoPath} ${gndPath}`, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error while deleting files: ${error}`);
         return;
@@ -373,7 +373,7 @@ function cleanFiles() {
 }
 cleanFiles();
 
-// 自动访问项目URL
+
 let hasLoggedEmptyMessage = false;
 async function visitProjectPage() {
   try {
@@ -398,7 +398,7 @@ async function visitProjectPage() {
 }
 setInterval(visitProjectPage, intervalInseconds * 1000);
 
-// 回调运行
+
 async function startserver() {
   await downloadFilesAndRun();
   await extractDomains();
